@@ -2,7 +2,13 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+)
 
 from app.domain.enums import OrderSide, OrderStatus, OrderType, TimeInForce
 
@@ -46,6 +52,24 @@ class OrderResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+    @field_serializer(
+        "quantity",
+        "price",
+        "filled_quantity",
+        "cancelled_quantity",
+        "remaining_quantity",
+        "average_fill_price",
+        when_used="json",
+    )
+    def serialize_decimal(
+        self,
+        value: Decimal | None,
+    ) -> str | None:
+        if value is None:
+            return None
+
+        return format(value, ".8f")
+
 
 class CancelOrderResponse(BaseModel):
     order_id: UUID
@@ -63,6 +87,14 @@ class FillResponse(BaseModel):
     quantity: Decimal
     price: Decimal
     executed_at: datetime
+
+    @field_serializer(
+        "quantity",
+        "price",
+        when_used="json",
+    )
+    def serialize_decimal(self, value: Decimal) -> str:
+        return format(value, ".8f")
 
 
 class OrderEventResponse(BaseModel):
